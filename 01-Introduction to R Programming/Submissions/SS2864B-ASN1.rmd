@@ -1,0 +1,225 @@
+---
+title: "SS2864B Assignment 1"
+author: "Ali Al-Musawi"
+date: "15/01/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1:
+
+To find all built-in functions related to the exponential distribution, use the following loop:
+```{r}
+result <- c()
+# loop for however many packages loaded.
+for (i in 1:length(search())) {
+  # add the relevent functions that contain the substring "exp" to the vector result.
+  result <- c(result, ls(name = i, pattern = ".*exp.*"))
+}
+# display result
+result
+```
+To refine the result, we notice that there are two keywords that got matched that we do not want: "expand" and "expression". As such, we use grep to get rid of such functions:
+```{r}
+result <- c()
+# loop for however many packages loaded.
+for (i in 1:length(search())) {
+    # add the relevent functions that contain the substring "exp" to the vector result.
+  result <- c(result, ls(name = i, pattern = ".*exp.*"))
+}
+# discard any function name with substrings "expr" or "expand".
+result = result[grep(pattern = ".*expr.*|.*expand.*", x = result, invert = TRUE)]
+# display result
+result
+```
+The following function call produces a plot of the probability density function of the exponential distribution with the rate parameter $\lambda$ set to 1 and the $x$-axis is restricted to the interval $[1, 4]$. 
+```{r}
+curve(dexp, from = 1, to = 4)
+```
+
+## Question 2:
+
+In this section, we compare codes defined by the user using traditional control flow mechanisms with R's built-in functions to compute the sum and mean of a vector of numeric data. Let x denote the list of numbers 1 through 100. 
+```{r}
+x <- 1:100
+# record the time since the code starts execution.
+sumUserTime <- proc.time()
+# s shall denote the partial sum in every iteration of the following loop.
+s <- 0
+for (i in x) {
+  s <- s + i
+}
+# display the sum
+s
+# subtract the initial time from the current time to find the execution duration.
+sumUserTime <- proc.time() - sumUserTime
+# measure the execution duration of R's built-in sum function to compare.
+sumRTime <- proc.time()
+# display the sum
+sum(x)
+sumRTime <- proc.time() - sumRTime
+sumUserTime
+sumRTime
+# compare the times recorded
+print(paste(c("User sum implementation takes"), sumUserTime[3], "seconds.", collapse = ""))
+print(paste(c("R sum implementation takes"), sumRTime[3], "seconds.", collapse = ""))
+```
+Next, we implement the arithmetic mean by modifying the code above and compare its performance with the R-defined mean function.
+```{r}
+x <- 1:100
+# record the time since the code starts execution.
+meanUserTime <- proc.time()
+# s shall denote the partial sum in every iteration of the following loop.
+s <- 0
+for (i in x) {
+  s <- s + i
+}
+m <- s/length(x)
+# display the mean
+m
+# subtract the initial time from the current time to find the execution duration.
+meanUserTime <- proc.time() - meanUserTime
+# measure the execution duration of R's built-in mean function to compare.
+meanRTime <- proc.time()
+# display the sum
+mean(x)
+meanRTime <- proc.time() - meanRTime
+
+# compare the times recorded
+print(paste(c("User mean implementation takes"), meanUserTime[3], "seconds.", collapse = ""))
+print(paste(c("R mean implementation takes"), meanRTime[3], "seconds.", collapse = ""))
+```
+As we see, R functions take considerably less time compared to user-defined implementations to compute the sum and mean iteratively. This is because R's vectorized functions such as mean() and sum() are written in a compiled language such as C/C++, which takes much less time compared to our implementations in an interpreted language like R and Python. For each iteration, we have to check the data types we are processing, whereas in a compiled language with a vectorized setting, we only check the data types once.
+
+## Question 3:
+
+In this section, we examine floating-point arithmetic overflow. Consider the following finite geometric summation:
+$$ \sum_{j=0}^{n} r^j$$
+We are to evaluate it in three different appraoches. The first is using a for-loop, the second is using R's built-in sum() function, and the last using the closed formula for the geometric summation given by:
+$$\sum_{j=0}^{n} r^j = \frac{1-r^{n+1}}{1-r}$$
+Below, we set $r$ to 1.08 and vary $n$.
+```{r}
+r <- 1.08
+N <- c(10, 20, 30, 40)
+# Approach 1: Using a For-Loop
+for (n in N) {
+  # let s denote the partial sum in every iteration.
+  s <- 0
+  for (j in 0:n) {
+    s <- s + r^j
+  }
+  # display the result
+  print(paste(c("sum of r^j from j = 0 to ", n,  " yields ", s), collapse = ""))
+}
+
+# Approach 2: Using R's Built-in Function
+for (n in N) {
+  # generate vector
+  x <- r^(0:n)
+  # display the result
+  print(paste(c("sum of r^j from j = 0 to ", n,  " yields ", sum(x)), collapse = ""))
+}
+
+# Approach 3: Using a Closed-Form Formula
+geomSum <- function(r, n) {
+  return((1-r^(n+1))/(1-r))
+}
+for (n in N) {
+  # display the result
+  print(paste(c("sum of r^j from j = 0 to ", n,  " yields ", geomSum(r, n)), collapse = ""))
+}
+```
+There is no apparent variation between the result of the approaches. However, theoretically, the last approach yields the most precise results. Care must be taken when manipulating floating-point numbers as repeated summation increases the error significantly. In fact, we can demonstrate the accuracy loss for a very large summation by setting $n = 1000$. 
+```{r}
+r <- 1.08
+n <- 1000
+x <- r^(0:n)
+error <- (1-r^(n+1))/(1-r) - sum(x)
+# display the error
+error
+```
+The error is astronomical!
+
+## Question 4:
+
+Let $X$ be a standard normal random vector with $n$ random variables. We want to confirm the empirical rule, which states that approximately 95% of the components of X have an absolute value less than two. In other words:
+$$Pr(-2 < X_i < 2) \approx 0.95,  1 \le i \le n$$
+```{r}
+# set the size of the random vector.
+n <- 1000
+# test if the proportion is close 0.95 for different trials
+for (i in 1:10) {
+  # create a standard normal random vector of size n.
+x <- rnorm(n)
+# find the proportion of random variables whose absolute value is bounded by 2.
+print(mean(abs(x)<2))
+}
+# Repeat the same process for exponentially larger sample sizes:
+for (i in 1:6) {
+  x <- rnorm(10^i)
+  print(mean(abs(x)<2))
+}
+
+
+```
+
+## Question 5:
+
+To create such the design matrix of a full $2^3$ factorial design, we break the task to column by column.
+```{r}
+# create an empty matrix object
+M <- matrix()
+# construct the matrix column by column
+M <- cbind(1:8, rep(1:2, each = 4), rep(1:2, each = 2), rep(1:2, each = 1))
+# display the result
+M
+```
+
+
+## Question 6:
+In general, to obtain documentation in R, we call the help function. 
+```{r}
+help("cars")
+```
+This opens up an html with details on usage, format, and description of the "cars", a dataset. According to the documentation, we have 50 observations and two variables: "speed" and "dist".
+To calculate the mean stopping distance for all observations for which the speed was 20 miles per hour, we need to subset the "dist" column and take the mean of the subsetted vector.
+```{r}
+mean(cars$dist[cars$speed == 20])
+```
+Finally, let us construct a scatter plot to relate the distance to speed.
+```{r}
+plot(x=cars$speed, y=cars$dist, xlab="Speed (mph)", ylab="Stopping Distance (ft)")
+```
+The scatter plot appears to model the two variables in an increasing quadratic model when the stopping distance is considered a function of the speed. However, this is merely a hypothesis that needs to be tested using an appropriate regression inference test.
+
+## Question 7
+
+Now, we consider another dataset: "USArrests". To extract the dimensions of this dataset, we use the dim() function, which returns a vector with the first entry being the number of rows and the second entry being the number of columns.
+```{r}
+dim(USArrests)
+```
+Therefore, there are 50 rows (observations) and 4 columns (variables).
+To compute the median of each column, we call a function that re-uses the median function for every column to obtain a list of medians.
+```{r}
+lapply(USArrests, median)
+```
+Let us see the effect of percent urban population on the average murder arrests per capita. We will examine the murder arrests rate when the percent urban population is less than $50%$  and when it is greater than $77%$.
+```{r}
+# compute the average murder arrests per capita
+m50 <- mean(USArrests$Murder[USArrests$UrbanPop<50])
+m77 <- mean(USArrests$Murder[USArrests$UrbanPop>77])
+# display the difference between the means
+m77 - m50
+```
+Note how the increase in percent urban population is met by increase in average murder arrests. This is not a coincidence.
+Finally, we construct a random sample without replacement from the records of USArrests dataset of size 12. To do, this we select a sample of the indices of the dataset to allow us to extract the entire set of records we are interested in, not just a specific variable.
+```{r}
+# select a random sample of USArrests indices
+ind <- sample(x=1:dim(USArrests)[1], replace = FALSE, size = 12)
+USArr.Sample <- USArrests[ind,]
+# display the sample dataset.
+USArr.Sample
+```

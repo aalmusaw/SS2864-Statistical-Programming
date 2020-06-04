@@ -1,0 +1,340 @@
+---
+title: "SS-2864B Take Home Exam"
+author: "Ali Al-Musawi"
+date: "19/04/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+### (a)
+```{r}
+# This function returns the JB statistic given a sequence of random variables
+# Input: 
+# x: a numeric vector
+# Output:
+# The JB statistic of x[1], x[2], ..., x[n]
+JB = function(x) {
+  n = length(x)
+  x.bar = mean(x)
+  s = sd(x)
+  gamma = (1/(n*s^3))*sum((x - x.bar)^3)
+  kappa = (1/(n*s^4))*sum((x - x.bar)^4)
+  jb = (n*gamma^2)/6 + (n*(kappa-3)^2)/24
+  return(jb)
+}
+# Test The function
+set.seed(0)
+JB(rnorm(100))
+```
+
+### (b)
+```{r}
+n = 100
+set.seed(0)
+# Simulate x1
+eps = 0;
+x1 = rnorm(n, 2, 1+5*rbinom(n, 1, eps))
+# Simulate x2
+eps = 0.01
+x2 = rnorm(n, 2, 1+5*rbinom(n, 1, eps))
+# Simulate x3
+eps = 0.05
+x3 = rnorm(n, 2, 1+5*rbinom(n, 1, eps))
+# Test Normality
+par(mfrow=c(1,3))
+qqnorm(x1, main = "x1 QQ-plot")
+qqline(x1, col = 2)
+qqnorm(x2, main = "x2 QQ-plot")
+qqline(x2, col = 2)
+qqnorm(x3, main = "x3 QQ-plot")
+qqline(x3, col = 2)
+```
+Based on the result, we conclude $x_1, x_2$ datasets can be approximated by a normal distribution whereas $x_3$ cannot. It seems like increasing **eps** even slightly causes the dataset to deviate from normality.
+
+### (c)
+```{r}
+# This function uses Monte Carlo simulation to compute the JB statistic 
+# under the assumption of normality.
+# Input: 
+# n: the simulated sample size
+# K: the iterations of the simulation
+# Output:
+# The JB statistic of the K iterations
+JB.MC = function(n, K = 50000) {
+  X = replicate(K, rnorm(n))
+  jb.mc = apply(X = X, MARGIN = 2, FUN = JB)
+  return(jb.mc)
+}
+```
+
+### (d)
+```{r}
+# Use monte carlo to simulate some 50,000 values of the JB statistic
+jb.mc = JB.MC(100)
+hist(x = jb.mc, breaks = 225, probability = T, main = "Histogram and Density of Simulated JB")
+lines(density(jb.mc, adjust = 2), col = 4, lty = 'dashed')
+curve(dchisq(x, df = 2), from = min(jb.mc), to = max(jb.mc), col = 2, add = T)
+legend("topright", legend = c("Chi-Sq(2)", "Simulated JB"), col = c(2, 4), 
+       pch = 15, lty = c('solid', 'dashed'))
+```
+Note it is hard to see the behavior since most of the hump is concentrated on the left, so we will view the same plot on the sub-interval $x\in[0, 40]$.
+```{r}
+jb.mc = JB.MC(100)
+hist(x = jb.mc, breaks = 225, probability = T, 
+     main = "Histogram and Density of Simulated JB on [0, 40]",
+     xlim = c(0, 40))
+lines(density(jb.mc, adjust = 2), col = 4, lty = 'dashed')
+curve(dchisq(x, df = 2), from = 0, to = 40, col = 2, add = T)
+legend("topright", legend = c("Chi-Sq(2)", "Simulated JB"), col = c(2, 4), 
+       pch = 15, lty = c('solid', 'dashed'))
+```
+Based on the generated output, we observe that both densities are skewed to the right and have close maxima. Overall, they trace out the same curve family. On the other hand, it seems like the MC-simulated density decreases faster than the $\chi^2(2)$ density. Asymptotically, the densities converge.
+
+### (e)
+```{r}
+set.seed(0)
+# compute the JB stat on x1, x2, and x3:
+jb1 = JB(x1)
+jb2 = JB(x2)
+jb3 = JB(x3)
+# compute the p-value for each jb using the cdf of chisq(2)
+p1.chisq = pchisq(jb1, 2, lower.tail = F)
+p1.chisq
+p2.chisq = pchisq(jb2, 2, lower.tail = F)
+p2.chisq
+p3.chisq = pchisq(jb3, 2, lower.tail = F)
+p3.chisq
+# compute the p-value for each jb using monte carlo
+p1.mc = sum((sort(jb.mc) > jb1))/length(jb.mc)
+p1.mc
+p2.mc = sum((sort(jb.mc) > jb2))/length(jb.mc)
+p2.mc
+p3.mc = sum((sort(jb.mc) > jb3))/length(jb.mc)
+p3.mc
+
+```
+Note that the p-value results from the theoretical and simulated distributions are similar, and in fact identical for the dataset $x_3$. These p-values illustrate that $x_1, x_2$ come from a normal distribution with significance level $\alpha = 0.01$ while $x_3$ does not for any significance level. These results match with our QQ-plots. 
+
+\newpage
+
+## Question 2
+First off, we will import the huron dataset.
+```{r, echo=FALSE}
+"huron" = 
+structure(.Data = c(581.55999999999995, 581.54999999999995, 581.34000000000003, 580.84000000000003, 
+	580.33000000000004, 580.35000000000002, 579.87, 580.49000000000001, 
+	579.90999999999997, 580.07000000000005, 580.90999999999997, 581.10000000000002,
+	579.72000000000003, 580.32000000000005, 580.48000000000002, 580.38, 
+	581.86000000000001, 580.97000000000003, 580.79999999999995, 579.78999999999996,
+	580.38999999999999, 580.41999999999996, 580.82000000000005, 581.39999999999998,
+	581.32000000000005, 581.44000000000005, 581.67999999999995, 581.16999999999996,
+	580.52999999999997, 580.00999999999999, 579.90999999999997, 579.13999999999999,
+	579.15999999999997, 579.54999999999995, 579.66999999999996, 578.44000000000005,
+	578.24000000000001, 579.10000000000002, 579.09000000000003, 579.35000000000002,
+	578.82000000000005, 579.32000000000005, 579.00999999999999, 579., 
+	579.79999999999995, 579.83000000000004, 579.72000000000003, 579.88999999999999,
+	580.00999999999999, 579.37, 578.69000000000005, 578.19000000000005, 
+	578.66999999999996, 579.54999999999995, 578.91999999999996, 578.09000000000003,
+	579.37, 580.13, 580.13999999999999, 579.50999999999999, 579.24000000000001, 
+	578.65999999999997, 578.86000000000001, 578.04999999999995, 577.78999999999996,
+	576.75, 576.75, 577.82000000000005, 578.63999999999999, 580.58000000000004, 
+	579.48000000000002, 577.38, 576.89999999999998, 576.94000000000005, 
+	576.24000000000001, 576.84000000000003, 576.85000000000002, 576.89999999999998,
+	577.78999999999996, 578.17999999999995, 577.50999999999999, 577.23000000000002,
+	578.41999999999996, 579.61000000000001, 579.04999999999995, 579.25999999999999,
+	579.22000000000003, 579.38, 579.10000000000002, 577.95000000000005, 578.12, 579.75,
+	580.85000000000002, 580.40999999999997, 579.96000000000004, 579.61000000000001,
+	578.75999999999999, 578.17999999999995, 577.21000000000004, 577.13, 
+	579.10000000000002, 578.25, 577.90999999999997, 576.88999999999999, 
+	575.96000000000004, 576.79999999999995, 577.67999999999995, 578.38, 
+	578.51999999999998, 579.74000000000001, 579.30999999999995, 579.88999999999999,
+	579.96000000000004, 580.98000000000002, 581.03999999999996, 580.49000000000001,
+	580.51999999999998, 578.57000000000005, 578.96000000000004, 579.94000000000005,
+	579.76999999999998, 579.44000000000005, 578.97000000000003, 580.08000000000004,
+	580.23000000000002, 580.75, 581.26999999999998)
+, class = c("ts", "numeric")
+, tsp = c(1860., 1986., 1.)
+, title = "Lake Huron, mean level, July, 1860-1986"
+)
+```
+
+### (a)
+```{r}
+# This function estimates the coefficient theta of an AR(1) time series model
+# Input: 
+# x: a numeric vector with mean 0
+# Output:
+# The least-squares estimator of theta in AR(1)
+theta.est = function(x) {
+  n = length(x)
+  x.lag = c(0, x[-n])
+  x.sumsq = sum(x^2)
+  theta = sum(x.lag*x)/x.sumsq
+  return(theta)
+}
+# Test the function
+my.est = theta.est(huron - mean(huron))
+```
+
+### (b)
+```{r}
+x = huron - mean(huron)
+n = length(x)
+x.lag = c(0, x[-n])
+eps.hat = x - my.est*x.lag
+my.resid = eps.hat - mean(eps.hat)
+par(mfrow = c(1, 2))
+hist(my.resid, breaks = 2*ceiling(sqrt(n)), probability = T)
+lines(density(my.resid, adjust = 2), col = 2, lty = 'dashed')
+qqnorm(my.resid)
+qqline(my.resid, col = 2)
+```
+There is a strong of evidence of normality based on the output generated. That is, the centered residuals are normally distributed. 
+
+### (c)
+```{r}
+# The following function defines one boostrap simulation on global variables.
+one.boot = function(eps = my.resid, theta = my.est) {
+  n = length(eps)
+  eps.star = sample(eps, replace = T, size = n)
+  x.star = numeric(n)
+  x.star[1] = eps.star[1]
+  for (i in 2:n) {
+    x.star[i] = theta*x.star[i-1] + eps.star[i]
+    }
+  return (theta.est(x.star))
+}
+
+# Test the function to see if the output is different
+one.boot()
+one.boot()
+  
+# Run 10000 bootsrap rounds
+output = replicate(10000, one.boot())
+```
+
+### (d)
+```{r}
+hist(x = output-my.est, breaks = 200, probability = T)
+lines(density(output-my.est, adjust = 2), col = 2, lty = 'dashed')
+Rmisc::CI(output, ci = 0.95)
+```
+The boostrap method produced a narrow interval centred around a value close to the least-square estimate of theta, but the least squares estimate falls outside of the CI.
+
+\newpage
+
+## Question 3
+
+### (a)
+```{r}
+GLB.Ts_dSST = read.csv('GLB.Ts_dSST.csv', header = T,
+                       sep = ',', na.strings = '***')
+mydata = GLB.Ts_dSST[, 2:13]
+yearly.temp = apply(mydata, 1, mean)
+year = 1880:2019
+plot(year, yearly.temp, type = 'l', xlab = 'Year', ylab = 'Average Temperature',
+      main= 'Average Temperature Over Years 1880 - 2019', col = 1)
+
+```
+We see there is a cyclic pattern that reveals itself in the periods 1880-1940, and 1940-upwards, but after that, the trend is increased average temperature which is similar to the overall trend.
+
+### (b)
+```{r}
+# This is an objective function based on the sum of squares
+# here a = par[1], b = par[2]
+sumsqr = function(par) {
+  result = sum((yearly.temp - par[1] - par[2]*year)^2)
+  return(result)
+}
+ls.est = nlminb(start = c(-10, 0.1), objective = sumsqr)$par
+linear.fit = ls.est[1] + ls.est[2]*year
+resid = yearly.temp - linear.fit
+plot(year, yearly.temp, type = 'l', xlab = 'Year', ylab = 'Average Temperature',
+      main= 'Average Temperature Over Years 1880 - 2019', col = 1)
+lines(year, linear.fit, col = 2)
+legend(x = 'topleft', col = c(1, 2), legend = c('Empirical', 'Model'), pch = 15)
+```
+The fitted line captures the overall trend, however, it is not a great model as it neglects the cyclical pattern I mentioned earlier. Morever, it underestimates the temperature for Years $> 2000$.
+```{r}
+plot(x = year, y = resid, main = "Residual Plot")
+```
+Clearly, the residuals make a convex pattern in the cycles 1880-1940, and 1940-upwards. This suggests that a linear model is inappropriate for the given data.
+```{r}
+qqnorm(resid)
+qqline(resid, col = 2)
+```
+Based on the plot, the ends and centre of the data do not conform to the straight line, hence the residuals are not normally distributed.
+
+### (c)
+```{r}
+# This is an objective function based on a quadratic transformation to the data
+# here a = par[1], b = par[2], c = par[3]
+sumsqr = function(par) {
+  result = sum((yearly.temp - par[1] - par[2]*year - par[3]*year^2)^2)
+  return(result)
+}
+ls.est = nlminb(start = c(300, -1, 0.1), objective = sumsqr,
+                scale = c(1, 300, 1000))$par
+quadratic.fit = ls.est[1] + ls.est[2]*year + ls.est[3]*year^2
+resid = yearly.temp - quadratic.fit
+plot(year, yearly.temp, type = 'l', xlab = 'Year', ylab = 'Average Temperature',
+      main= 'Average Temperature Over Years 1880 - 2019', col = 1)
+lines(year, quadratic.fit, col = 3)
+legend(x = 'topleft', col = c(1, 3), legend = c('Empirical', 'Model'), pch = 15)
+```
+This model outperforms the linear model. It captures both the cyclical pattern as well as the overall trend. Additionally, it does not deviate a lot from the actual temperatures.
+
+```{r}
+par(mfrow= c(1, 2))
+plot(x = year, y = resid, main = "Residual Plot")
+qqnorm(resid)
+qqline(resid, col = 3)
+```
+The residual plot shows not so random residuals (rather, they are just the same as the linear model but amplified), and the QQ-plot shows a close fit to normality except at the extrema, hence this model may not be appropriate. 
+
+### (d)
+```{r}
+# This is an objective function with a dummy vector
+# here a = par[1], b = par[2]
+dummy= c(rep(0,85), rep(1,55))
+sumsqr = function(par) {
+  result = sum((yearly.temp - par[1] - par[2]*year - par[3]*dummy - par[4]*dummy*year)^2)
+  return(result)
+}
+ls.est = nlminb(start = c(-1, 1, -1, 1), objective = sumsqr)$par
+dummy.linear.fit = ls.est[1] + ls.est[2]*year + ls.est[3]*dummy + ls.est[4]*dummy*year
+resid = yearly.temp - dummy.linear.fit
+plot(year, yearly.temp, type = 'l', xlab = 'Year', ylab = 'Average Temperature',
+      main= 'Average Temperature Over Years 1880 - 2019', col = 1)
+lines(year, dummy.linear.fit, col = 4)
+legend(x = 'topleft', col = c(1, 4), legend = c('Empirical', 'Model'), pch = 15)
+```
+This model seems to do well in generalizing to the trend in every cycle without overfitting to the data. This model is great for making predictions. The kink around 1965 is looking unnatural.
+```{r}
+par(mfrow= c(1, 2))
+plot(x = year, y = resid, main = "Residual Plot")
+qqnorm(resid)
+qqline(resid, col = 4)
+```
+This model has completely random residuals, and the quantiles lies almosr perfectly on the theoretical line, which is evidence for normality.
+
+### (e)
+```{r}
+plot(year, yearly.temp, type = 'l', xlab = 'Year', ylab = 'Average Temperature',
+      main= 'Average Temperature Over Years 1880 - 2019', col = 1)
+lines(year, linear.fit, col = 2, lty = 'dashed')
+lines(year, quadratic.fit, col = 3, lty = 'dotted')
+lines(year, dummy.linear.fit, col = 4, lty = 'longdash')
+grid(lty = 'twodash', col = 'gray')
+legend(x = 'topleft', col = 1:4, legend = c('Empirical', 'Linear', 'Quadratic', 'Dummy'),
+       pch = 15)
+
+```
+All models show overall trend of increasing yearly average temperature. The quadratic model provides a smooth curve which is very natural and nice to work with for theoretical purposes (i.e differentiable). It closely matches the mean of the interval neighborhood it is at, however, it does not quite capture the cyclical pattern that renews around year 1940, and rather just captures a bigger concave-up pattern. It has risks of overfitting to the data, so it should not be used for predictions. The linear model is terrible to say the least. While it is very simple and easy to work with theoretically, it is highly biased. Finally, the dummy-linear model is the best since it captures the cyclical pattern by changing the slope around the kink. Additionally, it does not overfit to the data. This means it is great for predictions. It maintains low bias and low variance. However the kink around 1960 provides a challenege to work with the model in a theoretical setting. 
+  
+   
+Based on the models above, the average temperature per decade is increasing polynomially over time. This is a concern expressed climate scientists and activists.
